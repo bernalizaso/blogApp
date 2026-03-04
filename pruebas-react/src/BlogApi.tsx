@@ -21,9 +21,16 @@ export const BlogApp = () => {
     setEntries(filtered);
   };
 
-  const getEntries = async () =>{
-  //esto es con useEffect
-  }
+
+  useEffect(() => {
+    async function getEntriesFromDB(){
+      const data = await getAllEntriesAction()
+      setEntries(data)
+    }
+    getEntriesFromDB()
+  }, [getAllEntriesAction])
+  
+  
 
   const addEntry = (newEntry: Entry)=>{
 
@@ -45,7 +52,7 @@ export const BlogApp = () => {
         placeHolder="Busca la entrada"
         onQuery={getEntriesFiltered}
       ></SearchComponent>
-      <EntriesList entries={entries} onCharge={getEntries}></EntriesList>
+      <EntriesList entries={entries} ></EntriesList>
       <EntryForm onSaveEntry={addEntry}></EntryForm>
       <BlogFooter msj="Copyright blablabla"></BlogFooter>
     </>

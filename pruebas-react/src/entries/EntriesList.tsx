@@ -3,7 +3,7 @@ import type { FC } from "react";
 
 interface Props {
   entries: Entry[];
-  onCharge : ()=> void;
+
 }
 
 export const EntriesList: FC<Props> = ({ entries }) => {

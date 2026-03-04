@@ -5,7 +5,7 @@ interface Props {
   onQuery: (query: string) => void;
 }
 
-export const SearchComponent = ({ placeHolder, onQuery }: Props) => {
+export const SearchComponent = ({ placeHolder, onQuery}: Props) => {
   const [query, setQuery] = useState("");
   const handleSearch = () => {
     if (query) {

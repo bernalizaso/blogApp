@@ -16,8 +16,8 @@ export const EntryForm = ({ onSaveEntry }: Props) => {
 
     const newEntry: Entry = {
       id: Number(formId),
-      title: formTitle,
-      body: formBody,
+      tittle: formTitle,
+      content: formBody,
       date: formDate,
     };
 
