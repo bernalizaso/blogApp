@@ -8,9 +8,6 @@ interface Props {
 
 export const EntriesList: FC<Props> = ({ entries }) => {
 
-  
-
-
   return (
     <div>
       {entries.map((Entry) => (

@@ -1,46 +1,12 @@
 import { BlogHeader } from "./components/BlogHeader";
 import { BlogFooter } from "./components/BlogFooter";
-import { EntriesList } from "./entries/EntriesList";
-//import { Entries } from "./mock-entries/entries.mock";
-import { getAllEntriesAction } from './actions/get-all-entries'
-import { useState, useEffect } from "react";
-import type { Entry } from "./interfaces/EntryInterface";
+import { EntriesList } from "./components/EntriesList";
 import { SearchComponent } from "./components/SearchComponent";
 import { EntryForm } from "./components/EntryFormComponent";
+import { useEntries} from "./hooks/useEntries"
 
 export const BlogApp = () => {
-
-  const [entries, setEntries] = useState<Entry[]>([]);
-
-  const getEntriesFiltered = async (query: string) => {
-    const Entries = await getAllEntriesAction()
-    const filtered = Entries.filter((element) =>
-      element.content.toLowerCase().includes(query.toLowerCase()),
-    );
-
-    setEntries(filtered);
-  };
-
-
-  useEffect(() => {
-    async function getEntriesFromDB(){
-      const data = await getAllEntriesAction()
-      setEntries(data)
-    }
-    getEntriesFromDB()
-  }, [getAllEntriesAction])
-  
-  
-
-  const addEntry = (newEntry: Entry)=>{
-
-
-
-    setEntries([...entries, newEntry]);
-
-    console.log(entries)
-
-  }
+  const { entries, filterEntries, postEntry } = useEntries();
 
   return (
     <>
@@ -50,10 +16,10 @@ export const BlogApp = () => {
       ></BlogHeader>
       <SearchComponent
         placeHolder="Busca la entrada"
-        onQuery={getEntriesFiltered}
+        onQuery={filterEntries}
       ></SearchComponent>
       <EntriesList entries={entries} ></EntriesList>
-      <EntryForm onSaveEntry={addEntry}></EntryForm>
+      <EntryForm onSaveEntry={postEntry}></EntryForm>
       <BlogFooter msj="Copyright blablabla"></BlogFooter>
     </>
   );

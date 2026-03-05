@@ -7,5 +7,5 @@ export const getAllEntriesAction = async(): Promise<Entry[]> =>{
     const response = await blogApp.get<Entry[]>("/");
 
     return response.data
-
 }
+
