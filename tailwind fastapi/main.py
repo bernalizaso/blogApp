@@ -1,9 +1,8 @@
-from fastapi import FastAPI, Request, Depends
-from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI, Request, Depends, HTTPException
+from typing import List
 from fastapi.middleware.cors import CORSMiddleware
 from database import session, engine
-from model import Entry
+from models.model import Entry
 import datetime
 import database_model
 from sqlalchemy.orm import Session
@@ -27,39 +26,34 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-#Ejemplo de entradas para pruebas
 
-ejemplo_entry = [
-    Entry(
-        id=1,
-        date=str(datetime.date.today()),
-        tittle="TituloPromedio",
-        content="Esto es un contenido promedio",
-    ),
-    Entry(
-        id=2,
-        date=str(datetime.date.today()),
-        tittle="TituloPromedio2",
-        content="Esto es un contenido promedio2",
-    ),
-    Entry(
-        id=3,
-        date=str(datetime.date.today()),
-        tittle="TituloPromedio3 ",
-        content="Esto es un contenido promedio3 ",
-    ),
-]
-
-
-#Apertura base de datos
+#aca hay que hacer un refactor
 
 def init_db():
-    db = session()
-    count = db.query(database_model.Entry).count()
-    if count == 0:
-        for entry in ejemplo_entry:
-            db.add(database_model.Entry(**entry.model_dump()))
-        db.commit()
+
+    print("Creando tablas en la base de datos...")
+    database_model.Base.metadata.create_all(bind=engine)
+
+    with Session() as db:
+        try:
+            if db.query(database_model.Tag).count() == 0:
+                print("Poblando etiquetas iniciales...")
+                default_tags = [
+                    database_model.Tag(name="General"),
+                    database_model.Tag(name="Programación"),
+                    database_model.Tag(name="Tecnología"),
+                    database_model.Tag(name="Personal")
+                ]
+                db.add_all(default_tags)
+                db.commit()
+                print("Etiquetas creadas con éxito.")
+
+            entry_count = db.query(database_model.Entry).count()
+            print(f"Base de datos lista. Entradas encontradas: {entry_count}")
+            
+        except Exception as e:
+            db.rollback()
+            print(f"Error durante la inicialización de datos: {e}")
 
 init_db()
 
@@ -72,19 +66,22 @@ def get_db():
 
 
 
-#@app.get("/")
-#async def read_home(request: Request):
-#    return templates.TemplateResponse("guest/home.html", {"request": request})
-
-
-
 #Manejo de rutas
 #Entradas
 @app.post("/")
 async def post_entry(entry: Entry, db: Session = Depends(get_db)):
-    db.add(database_model.Entry(**entry.model_dump()))
+    entry_data = entry.model_dump(exclude={"tags"})
+    db_entry = database_model.Entry(**entry_data)
+    
+    for tag_item in entry.tags:
+        db_tag = db.query(database_model.Tag).filter(database_model.Tag.id == tag_item.id).first()
+        if db_tag:
+            db_entry.tags.append(db_tag) 
+    
+    db.add(db_entry)
     db.commit()
-    return entry
+    db.refresh(db_entry)
+    return db_entry
 
 
 @app.get("/{id}")
@@ -121,10 +118,27 @@ async def edit_entry(id: int, entry: Entry, db: Session = Depends(get_db),  ):
     else:
         return "La entrada no ha sido encontrada"
 
+#Manejo de rutas por contenido? verificar si tiene sentido hacer
+@app.get("/search/")
+async def search_entries(query: str, db: Session = Depends(get_db)):
+    results = db.query(database_model.Entry).filter(
+        (database_model.Entry.title.contains(query)) | 
+        (database_model.Entry.content.contains(query))
+    ).all()
+    return results
 
 
-#Manejo de rutas
-#Login
-# @app.get("/admin")
-# async def read_dashboard(request: Request):
-#    return templates.TemplateResponse("admin/dashboard.html", {"request": request})
+
+
+# --- RUTAS DE TAGS ---
+
+@app.get("/tags/", response_model=List[database_model.Tag]) 
+async def get_tags(db: Session = Depends(get_db)):
+    return db.query(database_model.Tag).all()
+
+@app.get("/tags/{tag_id}/entries")
+async def get_entries_by_tag(tag_id: int, db: Session = Depends(get_db)):
+    tag = db.query(database_model.Tag).filter(database_model.Tag.id == tag_id).first()
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag no encontrado")
+    return tag.entries
