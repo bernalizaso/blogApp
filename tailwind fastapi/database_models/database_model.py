@@ -23,7 +23,7 @@ class Entry(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     date = Column(String)
-    title = Column(String) 
+    tittle = Column(String) 
     content = Column(String)
     user_id = Column(Integer, ForeignKey("User.id"))
     author = relationship("User", back_populates="entries")

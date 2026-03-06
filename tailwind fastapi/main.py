@@ -1,10 +1,10 @@
 from fastapi import FastAPI, Request, Depends, HTTPException
 from typing import List
 from fastapi.middleware.cors import CORSMiddleware
-from database import session, engine
+from database_API.database import session, engine
 from models.model import Entry
 import datetime
-import database_model
+from database_models import database_model
 from sqlalchemy.orm import Session
 
 #Declaracion de objetos y dependencias
@@ -122,7 +122,7 @@ async def edit_entry(id: int, entry: Entry, db: Session = Depends(get_db),  ):
 @app.get("/search/")
 async def search_entries(query: str, db: Session = Depends(get_db)):
     results = db.query(database_model.Entry).filter(
-        (database_model.Entry.title.contains(query)) | 
+        (database_model.Entry.tittle.contains(query)) | 
         (database_model.Entry.content.contains(query))
     ).all()
     return results
@@ -132,7 +132,7 @@ async def search_entries(query: str, db: Session = Depends(get_db)):
 
 # --- RUTAS DE TAGS ---
 
-@app.get("/tags/", response_model=List[database_model.Tag]) 
+@app.get("/tags/") 
 async def get_tags(db: Session = Depends(get_db)):
     return db.query(database_model.Tag).all()
 
