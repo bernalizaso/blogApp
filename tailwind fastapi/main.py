@@ -1,16 +1,19 @@
-from fastapi import FastAPI, Request, Depends, HTTPException
+from fastapi import FastAPI, Request, Depends, HTTPException, Response, status
 from typing import List
 from fastapi.middleware.cors import CORSMiddleware
-from database_API.database import session, engine
-from models.model import Entry
+from models.model import Entry, User
 import datetime
+from database_API.dependencies import get_db
+from database_API.db_operations import init_db
 from database_models import database_model
 from sqlalchemy.orm import Session
+from auth_utils import get_password_hash, create_access_token, verify_password
+
+
 
 #Declaracion de objetos y dependencias
 app = FastAPI()
-database_model.Base.metadata.create_all(bind=engine)
-
+init_db()
 #arreglo de CORS
 origins = [
     "http://localhost:5173",
@@ -25,44 +28,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-#aca hay que hacer un refactor
-
-def init_db():
-
-    print("Creando tablas en la base de datos...")
-    database_model.Base.metadata.create_all(bind=engine)
-
-    with Session() as db:
-        try:
-            if db.query(database_model.Tag).count() == 0:
-                print("Poblando etiquetas iniciales...")
-                default_tags = [
-                    database_model.Tag(name="General"),
-                    database_model.Tag(name="Programación"),
-                    database_model.Tag(name="Tecnología"),
-                    database_model.Tag(name="Personal")
-                ]
-                db.add_all(default_tags)
-                db.commit()
-                print("Etiquetas creadas con éxito.")
-
-            entry_count = db.query(database_model.Entry).count()
-            print(f"Base de datos lista. Entradas encontradas: {entry_count}")
-            
-        except Exception as e:
-            db.rollback()
-            print(f"Error durante la inicialización de datos: {e}")
-
-init_db()
-
-def get_db():
-    db = session()
-    try:
-        yield db #funcion generadora, pausa la ejecucion y luego la continua. Es decir, devuelve el valor de db (en ese caso la sesion de la base de datos), ejecuta y luego sigue al finally que la cierra
-    finally:
-        db.close()
 
 
 
@@ -142,3 +107,60 @@ async def get_entries_by_tag(tag_id: int, db: Session = Depends(get_db)):
     if not tag:
         raise HTTPException(status_code=404, detail="Tag no encontrado")
     return tag.entries
+
+
+
+
+# --- RUTAS DE Login y Register---
+
+@app.post("/login")
+async def login(user_data: User, db: Session = Depends(get_db)):
+    # 1. Buscamos al usuario por su username en Postgres
+    user = db.query(database_model.User).filter(database_model.User.username == user_data.username).first()
+    
+    # 2. Verificamos si el usuario existe
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail="Usuario o contraseña incorrectos"
+        )
+
+    # 3. COMPARACIÓN SEGURA: Comparamos la clave plana con el hash de la DB
+    # La función verify_password se encarga de todo el proceso matemático
+    if not verify_password(user_data.password, user.password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail="Usuario o contraseña incorrectos"
+        )
+
+    # 4. Si llegó acá, las credenciales son válidas. Generamos el JWT de 24hs.
+    # Metemos el ID y el username en el Payload para "armar la sesión"
+    access_token = create_access_token(data={"sub": user.username, "id": user.id})
+    
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer",
+        "username": user.username # Útil para que React sepa a quién saludar
+    }
+
+@app.post("/register")
+async def register_user(user_data: User, db: Session = Depends(get_db)):
+    existing_user = db.query(database_model.User).filter(database_model.User.username == user_data.username).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="El nombre de usuario ya está en uso.")
+
+    hashed_password = get_password_hash(user_data.password)
+
+    new_user = database_model.User(
+        username=user_data.username,
+        password=hashed_password  
+    )
+
+    try:
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        return {"message": "Usuario registrado con éxito", "username": new_user.username}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error al guardar el usuario en la base de datos")

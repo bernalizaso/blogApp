@@ -26,8 +26,10 @@ class Entry(Base):
     tittle = Column(String) 
     content = Column(String)
     user_id = Column(Integer, ForeignKey("User.id"))
-    author = relationship("User", back_populates="entries")
-    tags = relationship("Tag", secondary=entry_tag, back_populates="entries")
+    author = relationship("User", back_populates="entries")#Esta columna la dejo por utilidad de alchemy para que me traiga el objeto author, si fuera sql puro no existe
+    tags = relationship("Tag", secondary=entry_tag, back_populates="entries") #back_populates es para la bidireccionalidad de una relacion (En este caso, con tag), si haces un cambio en Tag se cambia aca tambien
+#basicamente hidratacion de objetos
+
 
 class Tag(Base):
     __tablename__ = "Tag"
