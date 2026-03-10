@@ -140,7 +140,7 @@ async def login(user_data: User, db: Session = Depends(get_db)):
     return {
         "access_token": access_token, 
         "token_type": "bearer",
-        "username": user.username # Útil para que React sepa a quién saludar
+        "username": user.username 
     }
 
 @app.post("/register")
