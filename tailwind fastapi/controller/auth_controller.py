@@ -1,5 +1,6 @@
 from database_models import database_model
-from auth_utils import get_password_hash, create_access_token, verify_password
+from utils.auth_utils import create_access_token
+from utils.password_utils import  verify_password, get_password_hash
 from models.model import  User
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
