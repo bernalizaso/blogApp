@@ -9,7 +9,7 @@ load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
-ARG_TIMEZONE = timezone(timedelta(hours=-3)) #Revisar si hay un mejor metodo
+ARG_TIMEZONE = timezone(timedelta(hours=-3)) #Revisar si hay un mejor metodo// usar el de la base de datos
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
@@ -37,3 +37,5 @@ def get_password_hash(password: str):
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
+
+#Separar en 2
